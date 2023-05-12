@@ -80,8 +80,8 @@ def register(base, init_args=None, lookup_name=None, enum_id=None):
   """
   # base should either ber a class or a function.
   if not (inspect.isclass(base) or inspect.isfunction(base)):
-    raise ValueError("%s should either be a class or a function. Was: %s" %
-                     (base, type(base)))
+    raise ValueError(
+        f"{base} should either be a class or a function. Was: {type(base)}")
 
   basename = base.__name__
   if basename not in _registries:
@@ -110,19 +110,21 @@ def register(base, init_args=None, lookup_name=None, enum_id=None):
 
     if inspect.isclass(cls_or_method):
       if not issubclass(cls_or_method, base):
-        raise ValueError("%s is not a sublcass of %s" % (cls_or_method, base))
+        raise ValueError(f"{cls_or_method} is not a sublcass of {base}")
     elif inspect.isfunction(cls_or_method):
       # pylint: disable=deprecated-method
       if (len(inspect.getargspec(cls_or_method).args) != len(
           inspect.getargspec(base).args)):
         # pylint: enable=deprecated-method
-        raise ValueError("%s does not have the same number of arguments as %s" %
-                         (cls_or_method, base))
+        raise ValueError(
+            f"{cls_or_method} does not have the same number of arguments as {base}"
+        )
       if init_args:
         raise ValueError("init_args is provided for a method.")
     else:
-      raise ValueError("%s should either be a class or a function. Was: %s" %
-                       (cls_or_method, type(cls_or_method)))
+      raise ValueError(
+          f"{cls_or_method} should either be a class or a function. Was: {type(cls_or_method)}"
+      )
 
     name = lookup_name if lookup_name else cls_or_method.__name__
 
@@ -132,8 +134,7 @@ def register(base, init_args=None, lookup_name=None, enum_id=None):
                        "(Previous registration was in %s %s:%d)" %
                        (basename, name, function_name, filename, line_number))
 
-    logging.vlog(1,
-                 "Registering %s (%s) as %s." % (name, cls_or_method, basename))
+    logging.vlog(1, f"Registering {name} ({cls_or_method}) as {basename}.")
 
     # stack trace is [this_function, user_function,...]
     # so the user function is #1.
@@ -206,7 +207,7 @@ def get_base_enum(base):
   if basename not in _registries:
     return None
   registry = _registries[basename]
-  output = {}
-  for name, registered_instance in registry.items():
-    output.update({name: registered_instance[_ENUM_ID]})
-  return output
+  return {
+      name: registered_instance[_ENUM_ID]
+      for name, registered_instance in registry.items()
+  }

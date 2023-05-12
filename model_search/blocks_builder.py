@@ -63,8 +63,7 @@ class Blocks(object):
         continue
       if blocks_to_use is None or block_type.name in blocks_to_use:
         target = registry.lookup(block_type.name, blocks.Block)
-        hps = target.requires_hparams()
-        if hps:
-          search_space.merge(hps, name_prefix=(block_type.name + '_'))
+        if hps := target.requires_hparams():
+          search_space.merge(hps, name_prefix=f'{block_type.name}_')
 
     return search_space

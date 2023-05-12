@@ -76,14 +76,14 @@ class PhoenixTest(parameterized.TestCase, tf.test.TestCase):
                         logits_dimension)
 
     def _input_layer_fn(features, is_training, scope_name,
-                        lengths_feature_name):
+                          lengths_feature_name):
       del is_training
       del scope_name
       input_layer = tf.cast(features["zeros"], dtype=tf.float32)
-      if (spec.problem_type == phoenix_spec_pb2.PhoenixSpec.RNN_ALL_ACTIVATIONS
-          or
-          spec.problem_type == phoenix_spec_pb2.PhoenixSpec.RNN_LAST_ACTIVATIONS
-         ):
+      if spec.problem_type in [
+          phoenix_spec_pb2.PhoenixSpec.RNN_ALL_ACTIVATIONS,
+          phoenix_spec_pb2.PhoenixSpec.RNN_LAST_ACTIVATIONS,
+      ]:
         lengths = features[lengths_feature_name]
       else:
         lengths = None
@@ -234,7 +234,7 @@ class PhoenixTest(parameterized.TestCase, tf.test.TestCase):
       instance = self._create_phoenix_instance(problem, input_shape)
       features = {"zeros": tf.zeros(input_shape), "lengths": tf.ones([20])}
       labels = tf.ones(label_shape, dtype=tf.int32)
-      run_config = tf.estimator.RunConfig(model_dir=self.get_temp_dir() + "/1")
+      run_config = tf.estimator.RunConfig(model_dir=f"{self.get_temp_dir()}/1")
 
       model_fn = instance._make_model_fn(run_config, train_steps=100)
       _ = model_fn(features, labels, tf.estimator.ModeKeys.TRAIN, hparams)
@@ -291,7 +291,7 @@ class PhoenixTest(parameterized.TestCase, tf.test.TestCase):
   def test_model_fn_predict(self, problem, input_shape, hparams):
     instance = self._create_phoenix_instance(problem, input_shape)
     features = {"zeros": tf.zeros(input_shape), "lengths": tf.ones([20])}
-    run_config = tf.estimator.RunConfig(model_dir=self.get_temp_dir() + "/1")
+    run_config = tf.estimator.RunConfig(model_dir=f"{self.get_temp_dir()}/1")
 
     model_fn = instance._make_model_fn(run_config, train_steps=100)
     spec = model_fn(features, None, tf.estimator.ModeKeys.PREDICT, hparams)
@@ -431,7 +431,7 @@ class PhoenixTest(parameterized.TestCase, tf.test.TestCase):
         logits_dimension=5,
         label_vocabulary=vocab,
         loss_fn=loss_fn)
-    run_config = tf.estimator.RunConfig(model_dir=self.get_temp_dir() + "/1")
+    run_config = tf.estimator.RunConfig(model_dir=f"{self.get_temp_dir()}/1")
 
     def input_fn():
       features = {"zeros": tf.zeros(input_shape)}
@@ -490,7 +490,7 @@ class PhoenixTest(parameterized.TestCase, tf.test.TestCase):
         logits_dimension=1,
         loss_fn=loss_fn,
         metric_fn=metric_fn)
-    run_config = tf.estimator.RunConfig(model_dir=self.get_temp_dir() + "/1")
+    run_config = tf.estimator.RunConfig(model_dir=f"{self.get_temp_dir()}/1")
 
     def input_fn():
       features = {"zeros": tf.zeros(input_shape)}
@@ -551,7 +551,7 @@ class PhoenixTest(parameterized.TestCase, tf.test.TestCase):
         input_shape=input_shape,
         logits_dimension=num_classes,
         metric_fn=metric_fn)
-    run_config = tf.estimator.RunConfig(model_dir=self.get_temp_dir() + "/1")
+    run_config = tf.estimator.RunConfig(model_dir=f"{self.get_temp_dir()}/1")
 
     def input_fn():
       features = {"zeros": tf.zeros(input_shape)}
@@ -651,7 +651,7 @@ class PhoenixTest(parameterized.TestCase, tf.test.TestCase):
         logits_dimension=num_classes,
         label_vocabulary=label_vocabulary,
         loss_fn=loss_fn)
-    run_config = tf.estimator.RunConfig(model_dir=self.get_temp_dir() + "/1")
+    run_config = tf.estimator.RunConfig(model_dir=f"{self.get_temp_dir()}/1")
 
     def input_fn():
       features = {"zeros": tf.zeros(input_shape)}
@@ -697,7 +697,6 @@ class PhoenixTest(parameterized.TestCase, tf.test.TestCase):
           "label_fn":
               lambda: tf.constant(["ONE"] * 8, dtype=tf.string),  # batch_size
       })
-  # pylint: enable=unnecessary-lambda
   def test_head(self, head_fn, label_fn=None, loss_fn=None, metric_fn=None):
     batch_size = 8
     input_shape = [batch_size, 32, 32, 3]
@@ -715,7 +714,7 @@ class PhoenixTest(parameterized.TestCase, tf.test.TestCase):
         head=head_fn(),
         loss_fn=loss_fn,
         metric_fn=metric_fn)
-    run_config = tf.estimator.RunConfig(model_dir=self.get_temp_dir() + "/1")
+    run_config = tf.estimator.RunConfig(model_dir=f"{self.get_temp_dir()}/1")
 
     def input_fn():
       features = {"zeros": tf.zeros(input_shape)}

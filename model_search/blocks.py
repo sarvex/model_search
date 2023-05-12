@@ -479,8 +479,8 @@ class FullyConnectedBlock(Block):
             output_tensor.shape[-1], name='dense')(
                 input_tensor)
       return input_tensor + output_tensor
-    raise ValueError('Invalid ResidualConnectionType: {}'.format(
-        self._residual_connection_type))
+    raise ValueError(
+        f'Invalid ResidualConnectionType: {self._residual_connection_type}')
 
   def build(self, input_tensors, is_training, lengths=None, hparams=None):
     input_tensor = input_tensors[-1]
@@ -1586,8 +1586,7 @@ class SvdfBlock(Block):
         kernel_initializer=tf.keras.initializers.RandomUniform(-0.16, 0.16),
         name='svdf_conv_layer',
     )
-    layer_output = svdf_conv_layer(input_tensor)
-    return layer_output
+    return svdf_conv_layer(input_tensor)
 
   def build(self, input_tensors, is_training, lengths=None, hparams=None):
     input_tensor = input_tensors[-1]
@@ -1596,8 +1595,7 @@ class SvdfBlock(Block):
     elif self._fashion == SvdfImplementationFashion.SVDF_RNN_CELL:
       net = self._get_svdf_rnn_cell_output(input_tensor, lengths)
     else:
-      raise ValueError('Invalid SVDF Implementation fashion %s' %
-                       self._fashion.name)
+      raise ValueError(f'Invalid SVDF Implementation fashion {self._fashion.name}')
 
     if self._projection_size:
       net = tf.keras.layers.Dense(
@@ -1626,8 +1624,7 @@ class TunableSvdfBlock(Block):
         kernel_initializer=tf.keras.initializers.RandomUniform(-0.16, 0.16),
         name='svdf_conv_layer',
     )
-    layer_output = svdf_conv_layer(input_tensor)
-    return layer_output
+    return svdf_conv_layer(input_tensor)
 
   def build(self, input_tensors, is_training, lengths=None, hparams=None):
     input_tensor = input_tensors[-1]

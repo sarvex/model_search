@@ -194,13 +194,11 @@ def _merge_train_op_list(train_op_list, no_train_speedup):
   if not train_op_list:
     global_step = tf.compat.v1.train.get_or_create_global_step()
     # Train is 100 times faster. No parameters to train here.
-    train_op = tf.compat.v1.assign(global_step, global_step + no_train_speedup)
+    return tf.compat.v1.assign(global_step, global_step + no_train_speedup)
   elif len(train_op_list) == 1:
-    train_op = train_op_list[0]
+    return train_op_list[0]
   else:
-    train_op = tf.group(*train_op_list)
-
-  return train_op
+    return tf.group(*train_op_list)
 
 
 def eval_op_fn(loss):
@@ -334,14 +332,9 @@ class TaskManager(object):
             predictions=predictions,
             train_hooks=task_spec.train_hooks_list)
 
-    # MultiTask. New Phoenix Behavior
-    # Details in:
-    # go/phoenix-multitask
-    num_weights_in_labels = 0
-    for task_spec in self._phoenix_spec.multi_task_spec:
-      if not task_spec.weight_is_a_feature:
-        num_weights_in_labels += 1
-
+    num_weights_in_labels = sum(
+        1 for task_spec in self._phoenix_spec.multi_task_spec
+        if not task_spec.weight_is_a_feature)
     # In predict mode we don't have labels
     if labels:
       assert (len(labels) == len(self._phoenix_spec.multi_task_spec) +
@@ -365,7 +358,7 @@ class TaskManager(object):
         task_tower_spec = architecture_utils.construct_tower(
             phoenix_spec=self._phoenix_spec,
             input_tensor=tf.nn.relu(logits_spec.logits),
-            tower_name="task_{}_tower".format(task_spec.label_name),
+            tower_name=f"task_{task_spec.label_name}_tower",
             architecture=np.array(tower_architecture),
             is_training=is_training,
             lengths=lengths,
@@ -373,13 +366,12 @@ class TaskManager(object):
             model_directory=model_directory,
             logits_dimension=task_spec.number_of_classes,
             is_frozen=False,
-            # TODO(b/172564129): add dropouts.
-            dropout_rate=None)
+            dropout_rate=None,
+        )
         # Ignore auxiliary heads for task towers, if any.
         task_logits = task_tower_spec.logits_spec.logits
       else:
-        with tf.compat.v1.variable_scope("Phoenix/task_{}_tower".format(
-            task_spec.label_name)):
+        with tf.compat.v1.variable_scope(f"Phoenix/task_{task_spec.label_name}_tower"):
           task_logits = self._add_projection_if_needed(
               logits_spec.logits, task_spec.number_of_classes)
 
@@ -389,8 +381,7 @@ class TaskManager(object):
         aux_logits = self._add_projection_if_needed(logits_spec.aux_logits,
                                                     task_spec.number_of_classes)
         logits_spec = logits_spec._replace(aux_logits=aux_logits)
-      with tf.compat.v1.variable_scope("Phoenix/trainer_{}".format(
-          task_spec.label_name)):
+      with tf.compat.v1.variable_scope(f"Phoenix/trainer_{task_spec.label_name}"):
         if mode != tf.estimator.ModeKeys.PREDICT:
           task_labels = labels[task_spec.label_name]
         else:
@@ -425,7 +416,7 @@ class TaskManager(object):
       task_predictions = predictions_fn(
           task.logits, mode=mode, temperature=self._phoenix_spec.temperature)
       for prediction_key, prediction_value in task_predictions.items():
-        prediction_key_name = prediction_key + "/" + task.name
+        prediction_key_name = f"{prediction_key}/{task.name}"
         model_spec_predictions[prediction_key_name] = prediction_value
         if task.name == primary_task.name:
           model_spec_predictions[prediction_key] = prediction_value

@@ -177,7 +177,7 @@ class PriorGeneratorTest(parameterized.TestCase, tf.test.TestCase):
         _ = architecture_utils.construct_tower(
             phoenix_spec=phoenix_spec,
             input_tensor=input_tensor,
-            tower_name=str(tower) + '_0',
+            tower_name=f'{str(tower)}_0',
             architecture=architecture,
             is_training=True,
             lengths=None,
@@ -185,14 +185,15 @@ class PriorGeneratorTest(parameterized.TestCase, tf.test.TestCase):
             hparams=hp.HParams(),
             model_directory=dirname,
             is_frozen=False,
-            dropout_rate=None)
+            dropout_rate=None,
+        )
         architecture_utils.set_number_of_towers(tower, 1)
       architecture_utils.set_number_of_towers('replay_generator', 0)
       directory = flags.FLAGS.test_tmpdir
       saver = tf.compat.v1.train.Saver()
       sess.run(tf.compat.v1.global_variables_initializer())
       sess.run(tf.compat.v1.local_variables_initializer())
-      saver.save(sess, os.path.join(directory, str(trial_id)) + '/ckpt')
+      saver.save(sess, f'{os.path.join(directory, str(trial_id))}/ckpt')
 
   @parameterized.named_parameters(
       {
@@ -235,7 +236,7 @@ class PriorGeneratorTest(parameterized.TestCase, tf.test.TestCase):
           metadata=ml_metadata_db.MLMetaData(
               phoenix_spec=spec, study_name='', study_owner=''))
       fake_config = collections.namedtuple('RunConfig', ['model_dir'])
-      run_config = fake_config(model_dir=flags.FLAGS.test_tmpdir + '/10000')
+      run_config = fake_config(model_dir=f'{flags.FLAGS.test_tmpdir}/10000')
       tf.io.gfile.makedirs(run_config.model_dir)
       # Best three trials checkpoint are generated. If the generator chooses
       # the suboptimal (wrong) trials, the test will fail.
@@ -270,7 +271,7 @@ class PriorGeneratorTest(parameterized.TestCase, tf.test.TestCase):
           metadata=ml_metadata_db.MLMetaData(
               phoenix_spec=spec, study_name='', study_owner=''))
       fake_config = collections.namedtuple('RunConfig', ['model_dir'])
-      run_config = fake_config(model_dir=flags.FLAGS.test_tmpdir + '/10000')
+      run_config = fake_config(model_dir=f'{flags.FLAGS.test_tmpdir}/10000')
       tf.io.gfile.makedirs(run_config.model_dir)
       # Best three trials checkpoint are generated. If the generator chooses
       # the suboptimal (wrong) trials, the test will fail.
@@ -313,7 +314,7 @@ class PriorGeneratorTest(parameterized.TestCase, tf.test.TestCase):
               phoenix_spec=spec, study_name='', study_owner=''))
       fake_config = collections.namedtuple('RunConfig', ['model_dir'])
       # Should be multplication of 4.
-      run_config = fake_config(model_dir=flags.FLAGS.test_tmpdir + '/10000')
+      run_config = fake_config(model_dir=f'{flags.FLAGS.test_tmpdir}/10000')
       tf.io.gfile.makedirs(run_config.model_dir)
       # Best three trials checkpoint are generated. If the generator chooses
       # the suboptimal (wrong) trials, the test will fail.
@@ -353,7 +354,7 @@ class PriorGeneratorTest(parameterized.TestCase, tf.test.TestCase):
           metadata=ml_metadata_db.MLMetaData(
               phoenix_spec=spec, study_name='', study_owner=''))
       fake_config = collections.namedtuple('RunConfig', ['model_dir'])
-      run_config = fake_config(model_dir=flags.FLAGS.test_tmpdir + '/10000')
+      run_config = fake_config(model_dir=f'{flags.FLAGS.test_tmpdir}/10000')
       tf.io.gfile.makedirs(run_config.model_dir)
       # Best three trials checkpoint are generated. If the generator chooses
       # the suboptimal (wrong) trials, the test will fail.

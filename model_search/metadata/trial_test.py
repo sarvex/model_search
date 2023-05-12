@@ -18,7 +18,7 @@ from model_search.metadata import trial
 
 
 def _create_trials():
-  trials = [
+  return [
       trial.Trial({
           "id": 99,
           "model_dir": "99",
@@ -56,7 +56,6 @@ def _create_trials():
           },
       }),
   ]
-  return trials
 
 
 class TrialTest(absltest.TestCase):

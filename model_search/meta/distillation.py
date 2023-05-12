@@ -80,10 +80,10 @@ def get_distillation_loss_fn(teacher_logits, distillation_spec, my_id,
 
     return original_loss + lambda_ * distill_loss
 
-  if (distillation_spec.distillation_type ==
-      distillation_spec_pb2.DistillationSpec.MSE_LOGITS or
-      distillation_spec.distillation_type ==
-      distillation_spec_pb2.DistillationSpec.MSE_SOFTMAX):
+  if distillation_spec.distillation_type in [
+      distillation_spec_pb2.DistillationSpec.MSE_LOGITS,
+      distillation_spec_pb2.DistillationSpec.MSE_SOFTMAX,
+  ]:
     return _mse_teacher_loss_fn
   elif (distillation_spec.distillation_type ==
         distillation_spec_pb2.DistillationSpec.CROSS_ENTROPY):

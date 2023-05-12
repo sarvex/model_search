@@ -71,10 +71,8 @@ class ReplayState(object):
         otherwise.
     """
     towers_number = len(self._phoenix_spec.replay.towers)
-    output = (
-        trial_utils.adaptive_or_residual_ensemble(self._phoenix_spec) or
-        my_id < towers_number or towers_number == 1)
-    return output
+    return (trial_utils.adaptive_or_residual_ensemble(self._phoenix_spec)
+            or my_id < towers_number or towers_number == 1)
 
   def replay_is_importing_towers(self, my_id):
     """Returns true if we are importing a tower in this replay trial.
@@ -91,10 +89,9 @@ class ReplayState(object):
       True if we are importing a tower and False otherwise.
     """
     towers_number = len(self._phoenix_spec.replay.towers)
-    output = ((my_id == towers_number and towers_number > 1) or
-              (my_id > 1 and
-               trial_utils.adaptive_or_residual_ensemble(self._phoenix_spec)))
-    return output
+    return (my_id == towers_number and towers_number > 1) or (
+        my_id > 1
+        and trial_utils.adaptive_or_residual_ensemble(self._phoenix_spec))
 
 
 class GeneratorWithTrials(
@@ -162,15 +159,11 @@ class InProcessController(Controller):
     # Handling replay
     if self._replay_state.is_replay():
       if self._replay_state.replay_is_training_a_tower(my_id):
-        output.update({
-            base_tower_generator.SEARCH_GENERATOR:
-                GeneratorWithTrials(self._search_candidate_generator, [])
-        })
+        output[base_tower_generator.SEARCH_GENERATOR] = GeneratorWithTrials(
+            self._search_candidate_generator, [])
       if self._replay_state.replay_is_importing_towers(my_id):
-        output.update({
-            base_tower_generator.REPLAY_GENERATOR:
-                GeneratorWithTrials(self._replay_generator, [])
-        })
+        output[base_tower_generator.REPLAY_GENERATOR] = GeneratorWithTrials(
+            self._replay_generator, [])
 
       return _return_generators(output)
 
@@ -178,10 +171,8 @@ class InProcessController(Controller):
     # First: User suggestions first! No ensembling in suggestions.
     if my_id <= len(self._phoenix_spec.user_suggestions):
       logging.info("user suggestions mode")
-      output.update({
-          base_tower_generator.SEARCH_GENERATOR:
-              GeneratorWithTrials(self._search_candidate_generator, [])
-      })
+      output[base_tower_generator.SEARCH_GENERATOR] = GeneratorWithTrials(
+          self._search_candidate_generator, [])
       return _return_generators(output)
 
     # Second: Handle non-adaptive search
@@ -191,21 +182,12 @@ class InProcessController(Controller):
       search_trials = [t for t in all_trials if t.id <= pool_size]
       # Pool too small, continue searching
       if my_id <= pool_size:
-        output.update({
-            base_tower_generator.SEARCH_GENERATOR:
-                GeneratorWithTrials(self._search_candidate_generator,
-                                    search_trials)
-        })
-        return _return_generators(output)
-      # Pool hit critical mass, start ensembling.
+        output[base_tower_generator.SEARCH_GENERATOR] = GeneratorWithTrials(
+            self._search_candidate_generator, search_trials)
       else:
-        output.update({
-            base_tower_generator.PRIOR_GENERATOR:
-                GeneratorWithTrials(self._prior_candidate_generator,
-                                    search_trials)
-        })
-        return _return_generators(output)
-
+        output[base_tower_generator.PRIOR_GENERATOR] = GeneratorWithTrials(
+            self._prior_candidate_generator, search_trials)
+      return _return_generators(output)
     # Third: Adaptive / Residual ensemble search
     if (trial_utils.is_adaptive_ensemble_search(ensemble_spec) or
         trial_utils.is_residual_ensemble_search(ensemble_spec)):
@@ -217,54 +199,35 @@ class InProcessController(Controller):
       ]
       search_trials = [trial for trial in all_trials if trial.id > pool_size]
       if ensembling_trials:
-        output.update({
+        output |= {
             base_tower_generator.SEARCH_GENERATOR:
-                GeneratorWithTrials(self._search_candidate_generator,
-                                    search_trials),
+            GeneratorWithTrials(self._search_candidate_generator, search_trials),
             base_tower_generator.PRIOR_GENERATOR:
-                GeneratorWithTrials(self._prior_candidate_generator,
-                                    ensembling_trials)
-        })
-        return _return_generators(output)
+            GeneratorWithTrials(self._prior_candidate_generator,
+                                ensembling_trials),
+        }
       else:
-        output.update({
-            base_tower_generator.SEARCH_GENERATOR:
-                GeneratorWithTrials(self._search_candidate_generator,
-                                    search_trials)
-        })
-        return _return_generators(output)
-
+        output[base_tower_generator.SEARCH_GENERATOR] = GeneratorWithTrials(
+            self._search_candidate_generator, search_trials)
+      return _return_generators(output)
     # Fourth: Intermixed Search.
     if trial_utils.is_intermixed_ensemble_search(ensemble_spec):
       logging.info("intermix ensemble search mode")
       n = ensemble_spec.intermixed_search.try_ensembling_every
       search_trials = [t for t in all_trials if t.id % n != 0]
       if my_id % n != 0:
-        output.update({
-            base_tower_generator.SEARCH_GENERATOR:
-                GeneratorWithTrials(self._search_candidate_generator,
-                                    search_trials)
-        })
+        output[base_tower_generator.SEARCH_GENERATOR] = GeneratorWithTrials(
+            self._search_candidate_generator, search_trials)
         if (trial_utils.get_trial_mode(
             ensemble_spec, distillation_spec,
             my_id) == trial_utils.TrialMode.DISTILLATION):
-          output.update({
-              base_tower_generator.PRIOR_GENERATOR:
-                  GeneratorWithTrials(self._prior_candidate_generator,
-                                      all_trials)
-          })
-        return _return_generators(output)
+          output[base_tower_generator.PRIOR_GENERATOR] = GeneratorWithTrials(
+              self._prior_candidate_generator, all_trials)
       else:
-        output.update({
-            base_tower_generator.PRIOR_GENERATOR:
-                GeneratorWithTrials(self._prior_candidate_generator,
-                                    search_trials)
-        })
-        return _return_generators(output)
-
+        output[base_tower_generator.PRIOR_GENERATOR] = GeneratorWithTrials(
+            self._prior_candidate_generator, search_trials)
+      return _return_generators(output)
     # No ensembling
-    output.update({
-        base_tower_generator.SEARCH_GENERATOR:
-            GeneratorWithTrials(self._search_candidate_generator, all_trials)
-    })
+    output[base_tower_generator.SEARCH_GENERATOR] = GeneratorWithTrials(
+        self._search_candidate_generator, all_trials)
     return _return_generators(output)

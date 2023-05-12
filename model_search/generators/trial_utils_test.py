@@ -332,8 +332,7 @@ class TrialUtilsTest(parameterized.TestCase, tf.test.TestCase):
             "search_generator_0": "caller_3",
         })
     self.assertEqual(set_output, {"caller": 4})
-    with tf.io.gfile.GFile(
-        self.get_temp_dir() + "/previous_dirs_dependencies.txt", "r") as f:
+    with tf.io.gfile.GFile(f"{self.get_temp_dir()}/previous_dirs_dependencies.txt", "r") as f:
       data = f.read()
     self.assertEqual(data, "1")
 
@@ -362,8 +361,7 @@ class TrialUtilsTest(parameterized.TestCase, tf.test.TestCase):
         my_model_dir=self.get_temp_dir())
     self.assertEqual(output, {"search_generator_0": "caller_1"})
     self.assertEqual(set_output, {"caller": 2})
-    with tf.io.gfile.GFile(
-        self.get_temp_dir() + "/previous_dirs_dependencies.txt", "r") as f:
+    with tf.io.gfile.GFile(f"{self.get_temp_dir()}/previous_dirs_dependencies.txt", "r") as f:
       data = f.read()
     self.assertEqual(data, "1\n2")
 
@@ -392,8 +390,7 @@ class TrialUtilsTest(parameterized.TestCase, tf.test.TestCase):
             context="should_be_deleted"))
 
     output_spec = phoenix_spec_pb2.PhoenixSpec()
-    with tf.io.gfile.GFile(self.get_temp_dir() + "/replay_config.pbtxt",
-                           "r") as f:
+    with tf.io.gfile.GFile(f"{self.get_temp_dir()}/replay_config.pbtxt", "r") as f:
       text_format.Parse(f.read(), output_spec)
 
     expected_spec = phoenix_spec_pb2.PhoenixSpec()

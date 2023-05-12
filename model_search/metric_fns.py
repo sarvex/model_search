@@ -99,18 +99,22 @@ def make_accuracy_metric_fn(label_vocabulary=None):
               value_dtype=tf.int64)
           table = tf.lookup.StaticVocabularyTable(initializer, 1, name="lookup")
           label_ids = table.lookup(label)
-          metrics_dict["accuracy/" + task_name] = tf.compat.v1.metrics.accuracy(
-              label_ids, predictions["predictions/" + task_name])
+          metrics_dict[
+              f"accuracy/{task_name}"] = tf.compat.v1.metrics.accuracy(
+                  label_ids, predictions[f"predictions/{task_name}"])
         elif label.dtype.is_integer and (not label_vocabulary or
                                          task_name not in label_vocabulary):
-          metrics_dict["accuracy/" + task_name] = tf.compat.v1.metrics.accuracy(
-              label, predictions["predictions/" + task_name])
-        elif (label.dtype.is_floating and
-              (not label_vocabulary or task_name not in label_vocabulary) and
-              tf.squeeze(label).shape == tf.squeeze(
-                  predictions["predictions/" + task_name]).shape):
-          metrics_dict["accuracy/" + task_name] = tf.compat.v1.metrics.accuracy(
-              tf.cast(label, "int32"), predictions["predictions/" + task_name])
+          metrics_dict[
+              f"accuracy/{task_name}"] = tf.compat.v1.metrics.accuracy(
+                  label, predictions[f"predictions/{task_name}"])
+        elif (label.dtype.is_floating
+              and (not label_vocabulary or task_name not in label_vocabulary)
+              and tf.squeeze(label).shape == tf.squeeze(
+                  predictions[f"predictions/{task_name}"]).shape):
+          metrics_dict[
+              f"accuracy/{task_name}"] = tf.compat.v1.metrics.accuracy(
+                  tf.cast(label, "int32"),
+                  predictions[f"predictions/{task_name}"])
         else:
           logging.warning(
               "Unable to compute accuracy for task %s, since labels has dtype "
@@ -183,14 +187,13 @@ def _make_auc_metric_fn(curve, label_vocabulary):
       if not label_vocabulary:
         raise ValueError(
             "labels is of dtype string, but label_vocabulary is not present.")
-      else:
-        initializer = tf.lookup.KeyValueTensorInitializer(
-            keys=label_vocabulary,
-            values=range(len(label_vocabulary)),
-            name="class_id_lookup",
-            value_dtype=tf.int64)
-        table = tf.lookup.StaticVocabularyTable(initializer, 1, name="lookup")
-        label_ids = table.lookup(labels)
+      initializer = tf.lookup.KeyValueTensorInitializer(
+          keys=label_vocabulary,
+          values=range(len(label_vocabulary)),
+          name="class_id_lookup",
+          value_dtype=tf.int64)
+      table = tf.lookup.StaticVocabularyTable(initializer, 1, name="lookup")
+      label_ids = table.lookup(labels)
     else:
       label_ids = labels
 

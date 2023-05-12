@@ -83,8 +83,8 @@ class Provider(data.Provider):
 
   def get_feature_columns(self):
     """Returns feature columns."""
-    feature_columns = [
-        tf.feature_column.numeric_column(
-            key='image', shape=(self._image_height, self._image_width, 3))
+    return [
+        tf.feature_column.numeric_column(key='image',
+                                         shape=(self._image_height,
+                                                self._image_width, 3))
     ]
-    return feature_columns

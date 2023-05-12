@@ -64,10 +64,7 @@ class SearchCandidateGenerator(base_tower_generator.BaseTowerGenerator):
     return "search_generator"
 
   def _get_trial_from_id(self, trial_id, trials):
-    for trial in trials:
-      if trial.id == trial_id:
-        return trial
-    return None
+    return next((trial for trial in trials if trial.id == trial_id), None)
 
   def _create_new_architecture(self, features, input_layer_fn,
                                shared_input_tensor, architecture, run_config,
@@ -86,15 +83,16 @@ class SearchCandidateGenerator(base_tower_generator.BaseTowerGenerator):
       input_tensor, lengths = input_layer_fn(
           features=features,
           is_training=is_training,
-          scope_name="Phoenix/" + self.generator_name() + "_0/Input",
-          lengths_feature_name=lengths_feature_name)
+          scope_name=f"Phoenix/{self.generator_name()}_0/Input",
+          lengths_feature_name=lengths_feature_name,
+      )
 
     self._save_architecture(architecture, run_config.model_dir, my_id)
 
     tower_spec = architecture_utils.construct_tower(
         phoenix_spec=self._phoenix_spec,
         input_tensor=input_tensor,
-        tower_name=self.generator_name() + "_0",
+        tower_name=f"{self.generator_name()}_0",
         architecture=architecture,
         is_training=is_training,
         lengths=lengths,
@@ -103,7 +101,8 @@ class SearchCandidateGenerator(base_tower_generator.BaseTowerGenerator):
         hparams=hparams,
         model_directory=run_config.model_dir,
         dropout_rate=dropout_rate,
-        allow_auxiliary_head=self._allow_auxiliary_head)
+        allow_auxiliary_head=self._allow_auxiliary_head,
+    )
     logits_specs = [tower_spec.logits_spec]
 
     apply_snapshot = (
@@ -115,8 +114,9 @@ class SearchCandidateGenerator(base_tower_generator.BaseTowerGenerator):
           checkpoint=tf.train.latest_checkpoint(
               architecture_utils.DirectoryHandler.trial_dir(
                   self._get_trial_from_id(prev_trial, trials))),
-          original_scope="Phoenix/{}_0".format(self.generator_name()),
-          new_scope="Phoenix/{}_0".format(self.generator_name()))
+          original_scope=f"Phoenix/{self.generator_name()}_0",
+          new_scope=f"Phoenix/{self.generator_name()}_0",
+      )
 
     architecture_utils.set_number_of_towers(self.generator_name(), 1)
     return logits_specs, [tower_spec.architecture]
@@ -163,12 +163,10 @@ class SearchCandidateGenerator(base_tower_generator.BaseTowerGenerator):
         architecture_utils.set_number_of_towers(self.generator_name(), 0)
         return [], []
 
-      # Adaptive and residual ensemble search.
       elif (trial_utils.is_adaptive_ensemble_search(self._ensemble_spec) or
             trial_utils.is_residual_ensemble_search(self._ensemble_spec)):
-        every = self._ensemble_spec.adaptive_search.increase_width_every
         relevant_trials = trials
-        if every:
+        if every := self._ensemble_spec.adaptive_search.increase_width_every:
           relevant_trials = [
               trial for trial in trials if trial.id >= my_id // every * every
           ]
@@ -177,7 +175,6 @@ class SearchCandidateGenerator(base_tower_generator.BaseTowerGenerator):
         return create_new_architecture_fn(
             architecture=architecture, prev_trial=prev_trial)
 
-      # Intermixed ensemble search.
       elif trial_utils.is_intermixed_ensemble_search(self._ensemble_spec):
         every = self._ensemble_spec.intermixed_search.try_ensembling_every
 
@@ -194,8 +191,9 @@ class SearchCandidateGenerator(base_tower_generator.BaseTowerGenerator):
             architecture=architecture, prev_trial=prev_trial)
 
       else:
-        raise ValueError("Unknown ensemble search type '{}'".format(
-            self._ensemble_spec.ensemble_search_type))
+        raise ValueError(
+            f"Unknown ensemble search type '{self._ensemble_spec.ensemble_search_type}'"
+        )
 
     if (trial_mode == trial_utils.TrialMode.DISTILLATION and
         trial_utils.is_intermixed_ensemble_search(self._ensemble_spec)):
@@ -207,7 +205,7 @@ class SearchCandidateGenerator(base_tower_generator.BaseTowerGenerator):
         model_dir = architecture_utils.DirectoryHandler.trial_dir(best_trial)
         assert architecture_utils.get_number_of_towers(
             model_dir, self.generator_name()) == 1
-        tower_name = self.generator_name() + "_0"
+        tower_name = f"{self.generator_name()}_0"
         tower_spec = architecture_utils.import_tower(
             phoenix_spec=self._phoenix_spec,
             features=features,

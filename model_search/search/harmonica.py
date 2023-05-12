@@ -102,9 +102,11 @@ class Harmonica(search_algorithm.SearchAlgorithm):
     for block in architecture:
       # These are connector blocks (non-trainable) that connect CNN and DNN.
       # They should not be a part of out search problem.
-      if (block == blocks.BlockType.FLATTEN or
-          block == blocks.BlockType.DOWNSAMPLE_FLATTEN or
-          block == blocks.BlockType.PLATE_REDUCTION_FLATTEN):
+      if block in [
+          blocks.BlockType.FLATTEN,
+          blocks.BlockType.DOWNSAMPLE_FLATTEN,
+          blocks.BlockType.PLATE_REDUCTION_FLATTEN,
+      ]:
         continue
       index = self._block_indices.index(block)
       # One-hot encoding but with -1 and 1.

@@ -110,7 +110,4 @@ class Provider(data.Provider):
   def get_feature_columns(self):
     """Returns feature columns."""
     features = [f for f in self._features if f != str(self._label_index)]
-    feature_columns = [
-        tf.feature_column.numeric_column(key=key) for key in features
-    ]
-    return feature_columns
+    return [tf.feature_column.numeric_column(key=key) for key in features]

@@ -144,7 +144,7 @@ class ConcatCombiner(Combiner):
       return inputs
 
     input_shapes = [input_t.shape for input_t in inputs]
-    with tf.compat.v1.name_scope("combiner_" + self.name):
+    with tf.compat.v1.name_scope(f"combiner_{self.name}"):
       # Fully connected case
       if all(len(shape) <= 2 for shape in input_shapes):
         return [tf.concat(inputs, axis=-1)]
@@ -163,8 +163,8 @@ class ConcatCombiner(Combiner):
         return [tf.concat(padded_inputs, axis=concat_axis)]
 
     raise NotImplementedError(
-        "ConcatCombiner does not know how to deal with inputs of these shapes. "
-        "Input shapes: {}".format(input_shapes))
+        f"ConcatCombiner does not know how to deal with inputs of these shapes. Input shapes: {input_shapes}"
+    )
 
 
 class CombinerType(enum.IntEnum):
@@ -372,7 +372,7 @@ class Architecture(
           "Tensor. Otherwise, input_tensor must be a dict.")
     block_index = 1
     str_signature = ""
-    with tf.compat.v1.variable_scope("Phoenix/{}".format(self.tower_name)):
+    with tf.compat.v1.variable_scope(f"Phoenix/{self.tower_name}"):
       for node in self.node_list:
         str_signature += str(node.block_type)
         # TODO(b/172564129): Should block_index also be ignored when uniform
@@ -400,7 +400,7 @@ class Architecture(
             block_index += 1
 
       # Create the logits.
-      scope = "last_dense_{}".format(str_signature)
+      scope = f"last_dense_{str_signature}"
       scope = architecture_utils.strip_scope(
           scope, phoenix_spec.transfer_learning_spec.transfer_learning_type,
           str_signature)
@@ -425,16 +425,14 @@ class Architecture(
     computation graph or trainable variables themselves, only the high-level
     structure.
     """
-    input_indices_padded_name = "architectures/{}/{}".format(
-        self.tower_name, INPUT_INDICES_PADDED_TENSOR_NAME)
-    input_indices_lengths_name = "architectures/{}/{}".format(
-        self.tower_name, INPUT_INDICES_LENGTHS_TENSOR_NAME)
-    combiner_types_name = "architectures/{}/{}".format(
-        self.tower_name, COMBINER_TYPES_TENSOR_NAME)
-    block_types_name = "architectures/{}/{}".format(self.tower_name,
-                                                    BLOCK_TYPES_TENSOR_NAME)
-    input_keys_name = "architectures/{}/{}".format(self.tower_name,
-                                                   INPUT_KEYS_TENSOR_NAME)
+    input_indices_padded_name = (
+        f"architectures/{self.tower_name}/{INPUT_INDICES_PADDED_TENSOR_NAME}")
+    input_indices_lengths_name = (
+        f"architectures/{self.tower_name}/{INPUT_INDICES_LENGTHS_TENSOR_NAME}")
+    combiner_types_name = (
+        f"architectures/{self.tower_name}/{COMBINER_TYPES_TENSOR_NAME}")
+    block_types_name = f"architectures/{self.tower_name}/{BLOCK_TYPES_TENSOR_NAME}"
+    input_keys_name = f"architectures/{self.tower_name}/{INPUT_KEYS_TENSOR_NAME}"
 
     input_indices_max_length = max(
         len(node.input_indices) for node in self.node_list)
@@ -509,38 +507,37 @@ def restore_from_checkpoint(directory, tower_name="search_generator_0"):
 
   reader = tf.compat.v1.train.NewCheckpointReader(checkpoint)
 
-  input_indices_padded_np = reader.get_tensor("architectures/{}/{}".format(
-      tower_name, INPUT_INDICES_PADDED_TENSOR_NAME))
-  input_indices_lengths_np = reader.get_tensor("architectures/{}/{}".format(
-      tower_name, INPUT_INDICES_LENGTHS_TENSOR_NAME))
+  input_indices_padded_np = reader.get_tensor(
+      f"architectures/{tower_name}/{INPUT_INDICES_PADDED_TENSOR_NAME}")
+  input_indices_lengths_np = reader.get_tensor(
+      f"architectures/{tower_name}/{INPUT_INDICES_LENGTHS_TENSOR_NAME}")
   input_indices_lengths = input_indices_lengths_np.tolist()
   input_indices_padded_list = input_indices_padded_np.tolist()
-  input_indices_list = []
-  for input_indices_length, input_indices_padded in zip(
-      input_indices_lengths, input_indices_padded_list):
-    input_indices_list.append(input_indices_padded[:input_indices_length])
-
-  combiner_types_np = reader.get_tensor("architectures/{}/{}".format(
-      tower_name, COMBINER_TYPES_TENSOR_NAME))
+  input_indices_list = [
+      input_indices_padded[:input_indices_length]
+      for input_indices_length, input_indices_padded in zip(
+          input_indices_lengths, input_indices_padded_list)
+  ]
+  combiner_types_np = reader.get_tensor(
+      f"architectures/{tower_name}/{COMBINER_TYPES_TENSOR_NAME}")
   combiner_types = combiner_types_np.tolist()
 
-  block_types_np = reader.get_tensor("architectures/{}/{}".format(
-      tower_name, BLOCK_TYPES_TENSOR_NAME))
+  block_types_np = reader.get_tensor(
+      f"architectures/{tower_name}/{BLOCK_TYPES_TENSOR_NAME}")
   block_types = block_types_np.tolist()
 
-  input_keys_np = reader.get_tensor("architectures/{}/{}".format(
-      tower_name, INPUT_KEYS_TENSOR_NAME))
-  input_keys_b = input_keys_np.tolist()
-  if input_keys_b:
+  input_keys_np = reader.get_tensor(
+      f"architectures/{tower_name}/{INPUT_KEYS_TENSOR_NAME}")
+  if input_keys_b := input_keys_np.tolist():
     input_keys = [input_key_b.decode() for input_key_b in input_keys_b]
   else:
     input_keys = None
 
-  node_list = []
-  for input_indices, combiner_type, block_type in zip(input_indices_list,
-                                                      combiner_types,
-                                                      block_types):
-    node_list.append(Node(block_type, input_indices, combiner_type))
+  node_list = [
+      Node(block_type, input_indices, combiner_type)
+      for input_indices, combiner_type, block_type in zip(
+          input_indices_list, combiner_types, block_types)
+  ]
   return Architecture(node_list, input_keys)
 
 

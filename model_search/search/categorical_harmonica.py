@@ -119,9 +119,8 @@ class Harmonica(search_algorithm.SearchAlgorithm):
       Returns the following value:
       \Phi_t(k) = e^{(2\pi i k)/len(self._block_indices)}
     """
-    value = cmath.exp(
-        2 * cmath.pi * complex(0, 1) * t * k / len(self._block_indices))
-    return value
+    return cmath.exp(2 * cmath.pi * complex(0, 1) * t * k /
+                     len(self._block_indices))
 
   def translate_architecture_to_feature_assignment(self, architecture):
     """Translates the trial architecture to a categorical assignment."""
@@ -133,9 +132,11 @@ class Harmonica(search_algorithm.SearchAlgorithm):
     for block in architecture:
       # These are connector blocks (non-trainable) that connect CNN and DNN.
       # They should not be a part of out search problem.
-      if (block == blocks.BlockType.FLATTEN or
-          block == blocks.BlockType.DOWNSAMPLE_FLATTEN or
-          block == blocks.BlockType.PLATE_REDUCTION_FLATTEN):
+      if block in [
+          blocks.BlockType.FLATTEN,
+          blocks.BlockType.DOWNSAMPLE_FLATTEN,
+          blocks.BlockType.PLATE_REDUCTION_FLATTEN,
+      ]:
         continue
       index = self._block_indices.index(block)
       for t in range(category_size):
@@ -163,13 +164,10 @@ class Harmonica(search_algorithm.SearchAlgorithm):
 
   def _parse_variable_name(self, name):
     """Returns the indices that form the variable given the name."""
-    # Bias
     if name == "1":
       return []
-    # Names are of the form 'x1 x6 x8'
-    else:
-      variables = name.split(" ")
-      return [int(varname[1:]) for varname in variables]
+    variables = name.split(" ")
+    return [int(varname[1:]) for varname in variables]
 
   def _extract_relevant_variables_indices(self, feature_extender, coefficients):
     """Returns a list of the relevant variables indices based on coeff."""
@@ -211,8 +209,7 @@ class Harmonica(search_algorithm.SearchAlgorithm):
       logging.info("We have relevant variables")
       # From relevant variable in the fourier space to relevant categorical
       # Variables in the original space.
-      relevant_blocks = set(
-          [i // len(self._block_indices) for i in relevant_variables])
+      relevant_blocks = {i // len(self._block_indices) for i in relevant_variables}
 
     # If true, we can search the whole space (the number of samples allowed
     # is less than the whole space).
@@ -234,7 +231,7 @@ class Harmonica(search_algorithm.SearchAlgorithm):
         # Translates to two assignments to predict loss.
         assignments += self.translate_architecture_to_feature_assignment(arc)
 
-    for i in range(num_samples):
+    for _ in range(num_samples):
       rand_arch = np.random.randint(
           len(self._block_indices), size=self._phoenix_spec.minimum_depth)
       arch_list = [self._block_indices[i] for i in rand_arch]

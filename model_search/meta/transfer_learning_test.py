@@ -41,7 +41,7 @@ class TransferLearningTest(parameterized.TestCase, tf.test.TestCase):
         saver = tf.compat.v1.train.Saver()
         sess.run(tf.compat.v1.global_variables_initializer())
         sess.run(var)
-        saver.save(sess, "{}/{}/ckpt".format(root_dir, i))
+        saver.save(sess, f"{root_dir}/{i}/ckpt")
     return len(shapes)
 
   def test_transfer_learning_hook_checkpoint_exists(self):
@@ -65,7 +65,7 @@ class TransferLearningTest(parameterized.TestCase, tf.test.TestCase):
         saver = tf.compat.v1.train.Saver()
         sess.run(tf.compat.v1.global_variables_initializer())
         sess.run(var)
-        saver.save(sess, "{}/{}/ckpt".format(root_dir, n_prev))
+        saver.save(sess, f"{root_dir}/{n_prev}/ckpt")
 
       # Assert that hook does not warm start variables if a checkpoint exists.
       with self.test_session(graph=tf.Graph()) as sess:
@@ -75,11 +75,10 @@ class TransferLearningTest(parameterized.TestCase, tf.test.TestCase):
             dtype=tf.float32,
             initializer=tf.compat.v1.zeros_initializer)
         saver = tf.compat.v1.train.Saver()
-        trials = []
-        for i in range(3):
-          trials.append(
-              test_utils.trial_with_dir(
-                  dir_value=os.path.join(root_dir, str(i)), id=i))
+        trials = [
+            test_utils.trial_with_dir(dir_value=os.path.join(root_dir, str(i)),
+                                      id=i) for i in range(3)
+        ]
         hook = transfer_learning.UniformAverageTransferLearningHook(
             vars_to_warm_start=[var],
             current_trial_id=n_prev,
@@ -88,7 +87,7 @@ class TransferLearningTest(parameterized.TestCase, tf.test.TestCase):
             max_completed_trials=1000000,
             model_dir=os.path.join(root_dir, str(n_prev)))
         hook.begin()
-        saver.restore(sess, "{}/{}/ckpt".format(root_dir, n_prev))
+        saver.restore(sess, f"{root_dir}/{n_prev}/ckpt")
         hook.after_create_session(sess, None)
         actual = sess.run(var)
         self.assertEqual(actual, expected)
@@ -160,11 +159,10 @@ class TransferLearningTest(parameterized.TestCase, tf.test.TestCase):
             shape=shapes[0],
             dtype=tf.float32,
             initializer=tf.compat.v1.zeros_initializer)
-        trials = []
-        for i in range(n_prev):
-          trials.append(
-              test_utils.trial_with_dir(
-                  dir_value=os.path.join(root_dir, str(i)), id=i))
+        trials = [
+            test_utils.trial_with_dir(dir_value=os.path.join(root_dir, str(i)),
+                                      id=i) for i in range(n_prev)
+        ]
         hook = transfer_learning.UniformAverageTransferLearningHook(
             vars_to_warm_start=[var],
             current_trial_id=n_prev,

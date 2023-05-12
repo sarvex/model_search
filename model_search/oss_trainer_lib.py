@@ -152,10 +152,8 @@ def get_dataset_provider():
   if len(data_providers) == 1:
     return data_providers[0]
 
-  # Registering more than one data provider
-  else:
-    logging.info("Registered data provider: %s", FLAGS.phoenix_dataset)
-    return registry.lookup(FLAGS.phoenix_dataset, ms_data.Provider)
+  logging.info("Registered data provider: %s", FLAGS.phoenix_dataset)
+  return registry.lookup(FLAGS.phoenix_dataset, ms_data.Provider)
 
 
 def loss_and_metric_and_predictions_fn(provider):
@@ -193,12 +191,8 @@ def make_run_config(model_dir=None, use_tpu=False):
   if save_checkpoints_secs and save_checkpoints_steps:
     raise ValueError("save_checkpoints_secs and save_checkpoints_steps "
                      "cannot both be non-zero.")
-  if not (save_checkpoints_secs or save_checkpoints_steps):
-    raise ValueError("save_checkpoints_secs and save_checkpoints_steps "
-                     "cannot both be zero.")
-
-  if use_tpu:
-    return tf.compat.v1.estimator.tpu.RunConfig(
+  if save_checkpoints_secs or save_checkpoints_steps:
+    return (tf.compat.v1.estimator.tpu.RunConfig(
         tpu_config=tf.compat.v1.estimator.tpu.TPUConfig(
             iterations_per_loop=200),
         model_dir=model_dir,
@@ -207,15 +201,18 @@ def make_run_config(model_dir=None, use_tpu=False):
         save_checkpoints_secs=save_checkpoints_secs,
         save_checkpoints_steps=save_checkpoints_steps,
         keep_checkpoint_max=FLAGS.phoenix_keep_checkpoint_max,
-        tf_random_seed=None)
-
-  return tf.estimator.RunConfig(
-      model_dir=model_dir,
-      save_summary_steps=FLAGS.phoenix_save_summary_steps,
-      save_checkpoints_secs=save_checkpoints_secs,
-      save_checkpoints_steps=save_checkpoints_steps,
-      keep_checkpoint_max=FLAGS.phoenix_keep_checkpoint_max,
-      tf_random_seed=FLAGS.phoenix_tf_random_seed)
+        tf_random_seed=None,
+    ) if use_tpu else tf.estimator.RunConfig(
+        model_dir=model_dir,
+        save_summary_steps=FLAGS.phoenix_save_summary_steps,
+        save_checkpoints_secs=save_checkpoints_secs,
+        save_checkpoints_steps=save_checkpoints_steps,
+        keep_checkpoint_max=FLAGS.phoenix_keep_checkpoint_max,
+        tf_random_seed=FLAGS.phoenix_tf_random_seed,
+    ))
+  else:
+    raise ValueError("save_checkpoints_secs and save_checkpoints_steps "
+                     "cannot both be zero.")
 
 
 def run_train_and_eval(hparams, model_dir, phoenix_instance, data_provider,
@@ -273,10 +270,7 @@ def get_trial_dir(model_dir, tuner_id):
   tuner_dir = os.path.join(model_dir, tuner_id)
   if not tf.io.gfile.exists(tuner_dir):
     tf.io.gfile.makedirs(tuner_dir)
-  existing_trials = tf.io.gfile.listdir(tuner_dir)
-  if not existing_trials:
-    trial_dir = os.path.join(tuner_dir, "1")
-  else:
+  if existing_trials := tf.io.gfile.listdir(tuner_dir):
     last_id = sorted([
         int(os.path.basename(t_dir))
         for t_dir in existing_trials
@@ -284,6 +278,8 @@ def get_trial_dir(model_dir, tuner_id):
     ])[-1]
     trial_dir = os.path.join(tuner_dir, str(int(last_id) + 1))
 
+  else:
+    trial_dir = os.path.join(tuner_dir, "1")
   if tf.io.gfile.exists(trial_dir):
     tf.io.gfile.rmtree(trial_dir)
 
@@ -298,7 +294,7 @@ def aggregate_initial_architecture(hparams):
   initial_architecture_size = len(
       [hp for hp in hparams.keys() if hp.startswith("initial_architecture")])
   output["initial_architecture"] = [
-      hparams["initial_architecture_{}".format(i)]
+      hparams[f"initial_architecture_{i}"]
       for i in range(initial_architecture_size)
   ]
   return output

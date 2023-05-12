@@ -37,13 +37,13 @@ def _create_spec(replay_towers=0, ensemble_type="none"):
   if ensemble_type == "adaptive":
     output.ensemble_spec.ensemble_search_type = (
         ensembling_spec_pb2.EnsemblingSpec.ADAPTIVE_ENSEMBLE_SEARCH)
-  if ensemble_type == "nonadaptive":
-    output.ensemble_spec.ensemble_search_type = (
-        ensembling_spec_pb2.EnsemblingSpec.NONADAPTIVE_ENSEMBLE_SEARCH)
-  if ensemble_type == "intermix":
+  elif ensemble_type == "intermix":
     output.ensemble_spec.ensemble_search_type = (
         ensembling_spec_pb2.EnsemblingSpec
         .INTERMIXED_NONADAPTIVE_ENSEMBLE_SEARCH)
+  elif ensemble_type == "nonadaptive":
+    output.ensemble_spec.ensemble_search_type = (
+        ensembling_spec_pb2.EnsemblingSpec.NONADAPTIVE_ENSEMBLE_SEARCH)
   return output
 
 

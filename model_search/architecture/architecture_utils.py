@@ -79,11 +79,11 @@ class DirectoryHandler(object):
 
     tfx_trial_prefix = "Trial-"
     dirs = directory.split("/")
-    for level in dirs:
-      if level.startswith(tfx_trial_prefix):
-        return int(level[len(tfx_trial_prefix):])
-
-    return None
+    return next(
+        (int(level[len(tfx_trial_prefix):])
+         for level in dirs if level.startswith(tfx_trial_prefix)),
+        None,
+    )
 
   @staticmethod
   def trial_dir(trial):
@@ -109,9 +109,9 @@ def get_block_hparams(hparams, block_name):
     return None
   return hp.HParams(
       **{
-          k[len(block_name + "_"):]: v
+          k[len(f"{block_name}_"):]: v
           for k, v in hparams.values().items()
-          if k.startswith(block_name + "_")
+          if k.startswith(f"{block_name}_")
       })
 
 
@@ -119,8 +119,7 @@ def get_hparams_from_dir(model_directory, tower_name):
   hparams = hparam_pb2.HParamDef()
   with tf.io.gfile.GFile(os.path.join(model_directory, tower_name), "r") as f:
     text_format.Parse(f.read(), hparams)
-  output = hp.HParams(hparam_def=hparams)
-  return output
+  return hp.HParams(hparam_def=hparams)
 
 
 def store_hparams_to_dir(hparams, model_directory, tower_name):
@@ -153,7 +152,7 @@ def get_architecture(directory, tower_name="search_generator_0"):
     trials -= 1
 
   reader = tf.compat.v1.train.NewCheckpointReader(checkpoint)
-  return reader.get_tensor("architectures/{}".format(tower_name))
+  return reader.get_tensor(f"architectures/{tower_name}")
 
 
 def set_architecture(architecture, tower_name="search_generator_0"):
@@ -165,25 +164,23 @@ def set_architecture(architecture, tower_name="search_generator_0"):
       for.
   """
   tf.compat.v1.get_variable(
-      name="architectures/{}".format(tower_name),
+      name=f"architectures/{tower_name}",
       shape=[architecture.size],
       trainable=False,
       initializer=tf.compat.v1.constant_initializer(architecture),
-      dtype=tf.int32)
+      dtype=tf.int32,
+  )
 
 
 # TODO(b/172564129): Figure out a long term solution for getting the tower size.
 def get_architecture_size(tower_name="search_generator_0"):
   """Returns the number of blocks of the architecture or None if ensembling."""
-  prefix = "architectures/{}".format(tower_name)
+  prefix = f"architectures/{tower_name}"
   architecture = [
       var for var in tf.compat.v1.global_variables() if prefix in var.name
   ]
   assert len(architecture) <= 1
-  size = None
-  if architecture:
-    size = architecture[0].shape[0]
-  return size
+  return architecture[0].shape[0] if architecture else None
 
 
 # Getter and setter for the number of towers. These functions are not really
@@ -202,7 +199,7 @@ def get_number_of_towers(directory, generator_name):
   """
   checkpoint = tf.train.latest_checkpoint(directory)
   reader = tf.compat.v1.train.NewCheckpointReader(checkpoint)
-  return reader.get_tensor(NUMBER_OF_TOWERS + "/{}".format(generator_name))
+  return reader.get_tensor(f"{NUMBER_OF_TOWERS}/{generator_name}")
 
 
 def set_number_of_towers(generator_name, number_of_towers):
@@ -213,11 +210,12 @@ def set_number_of_towers(generator_name, number_of_towers):
     number_of_towers: int - the number of towers the generator created.
   """
   tf.compat.v1.get_variable(
-      name=NUMBER_OF_TOWERS + "/{}".format(generator_name),
+      name=f"{NUMBER_OF_TOWERS}/{generator_name}",
       shape=[],
       trainable=False,
       initializer=tf.compat.v1.constant_initializer(number_of_towers),
-      dtype=tf.int32)
+      dtype=tf.int32,
+  )
 
 
 # These functions help Phoenix store and retrieve extra parameters for given
@@ -237,7 +235,7 @@ def get_parameter(directory, tower_name, parameter_name):
   """
   checkpoint = tf.train.latest_checkpoint(directory)
   reader = tf.compat.v1.train.NewCheckpointReader(checkpoint)
-  return reader.get_tensor("params/{}/{}".format(tower_name, parameter_name))
+  return reader.get_tensor(f"params/{tower_name}/{parameter_name}")
 
 
 def set_parameter(tower_name, parameter_name, value, dtype=tf.int32):
@@ -250,11 +248,12 @@ def set_parameter(tower_name, parameter_name, value, dtype=tf.int32):
     dtype: the type of the value. E.g., tf.int32.
   """
   tf.compat.v1.get_variable(
-      name="params/{}/{}".format(tower_name, parameter_name),
+      name=f"params/{tower_name}/{parameter_name}",
       shape=[],
       trainable=False,
       initializer=tf.compat.v1.constant_initializer(value),
-      dtype=dtype)
+      dtype=dtype,
+  )
 
 
 def fix_architecture_order(architecture, problem_type):
@@ -277,19 +276,20 @@ def fix_architecture_order(architecture, problem_type):
     return architecture
 
   output_architecture = []
-  flattens = tuple(block for block in architecture
-                   if "FLATTEN" in blocks.BlockType(block).name)
-  if not flattens:
+  if flattens := tuple(block for block in architecture
+                       if "FLATTEN" in blocks.BlockType(block).name):
+    output_architecture = [flattens[0]]
+
+  else:
     output_architecture = [blocks.BlockType.PLATE_REDUCTION_FLATTEN]
     logging.warning("initial_architecture does not have a flattening " "block.")
     logging.info("Adding a Flatten block to the architecture.")
-  else:
-    output_architecture = [flattens[0]]
-
   for block in architecture:
-    if (block == blocks.BlockType.FLATTEN or
-        block == blocks.BlockType.DOWNSAMPLE_FLATTEN or
-        block == blocks.BlockType.PLATE_REDUCTION_FLATTEN):
+    if block in [
+        blocks.BlockType.FLATTEN,
+        blocks.BlockType.DOWNSAMPLE_FLATTEN,
+        blocks.BlockType.PLATE_REDUCTION_FLATTEN,
+    ]:
       continue
     output_architecture = increase_structure_depth(
         np.array(output_architecture), block, problem_type)
@@ -447,7 +447,7 @@ def construct_tower(phoenix_spec,
   output = [input_tensor]
   block_index = 1
   str_signature = ""
-  with tf.compat.v1.variable_scope("Phoenix/{}".format(tower_name)):
+  with tf.compat.v1.variable_scope(f"Phoenix/{tower_name}"):
     for block_type in architecture:
       str_signature += str(block_type)
       # TODO(b/172564129): Should block_index also be ignored when uniform
@@ -474,7 +474,7 @@ def construct_tower(phoenix_spec,
           block_index += 1
 
     # Create the logits.
-    scope = "last_dense_{}".format(str_signature)
+    scope = f"last_dense_{str_signature}"
     scope = strip_scope(
         scope, phoenix_spec.transfer_learning_spec.transfer_learning_type,
         str_signature)
@@ -555,8 +555,9 @@ def import_tower(phoenix_spec,
     input_tensor, lengths = input_layer_fn(
         features=features,
         is_training=is_training,
-        scope_name="Phoenix/" + new_tower_name + "/Input",
-        lengths_feature_name=lengths_feature_name)
+        scope_name=f"Phoenix/{new_tower_name}/Input",
+        lengths_feature_name=lengths_feature_name,
+    )
 
   tower_spec = construct_tower(
       phoenix_spec=phoenix_spec,
@@ -575,14 +576,15 @@ def import_tower(phoenix_spec,
   if force_snapshot:
     init_variables(
         tf.train.latest_checkpoint(model_directory),
-        "Phoenix/{}".format(original_tower_name),
-        "Phoenix/{}".format(new_tower_name))
+        f"Phoenix/{original_tower_name}",
+        f"Phoenix/{new_tower_name}",
+    )
   return tower_spec
 
 
 def get_tower_variables(tower_name):
   """Returns all the variables belonging to the tower with the given name."""
-  prefix = "Phoenix/{}".format(tower_name)
+  prefix = f"Phoenix/{tower_name}"
   return [
       var for var in tf.compat.v1.trainable_variables() if prefix in var.name
   ]

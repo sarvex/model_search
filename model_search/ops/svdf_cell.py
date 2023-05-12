@@ -73,8 +73,8 @@ class SvdfCell(tf.compat.v1.nn.rnn_cell.RNNCell):
     self._memory_size = memory_size
     if self._memory_size <= 0:
       raise ValueError(
-          "`SvdfCell:{}` should have a memory size greater than zero.".format(
-              self._name))
+          f"`SvdfCell:{self._name}` should have a memory size greater than zero."
+      )
     if rank <= 0:
       raise ValueError("rank must be > 0")
     self._rank = rank
@@ -130,16 +130,13 @@ class SvdfCell(tf.compat.v1.nn.rnn_cell.RNNCell):
       input_shape = inputs.get_shape()
       # Validation.
       if input_shape.ndims is None:
-        raise ValueError(
-            "Inputs to `SvdfCell:{}` should have known rank.".format(
-                self._name))
+        raise ValueError(f"Inputs to `SvdfCell:{self._name}` should have known rank.")
       if len(input_shape) != 2:
-        raise ValueError(
-            "Inputs to `SvdfCell:{}` should have rank == 2.".format(self._name))
+        raise ValueError(f"Inputs to `SvdfCell:{self._name}` should have rank == 2.")
       if input_shape[-1] is None:
         raise ValueError(
-            "The last dimension of the inputs to `SvdfCell:{}` should be defined. Found `None`."
-            .format(self._name))
+            f"The last dimension of the inputs to `SvdfCell:{self._name}` should be defined. Found `None`."
+        )
       # Computation.
       feature_dim = inputs.shape[-1]
       # Expand to add input channels dimension.

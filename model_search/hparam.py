@@ -157,7 +157,7 @@ def _process_scalar_value(name, parse_fn, var_type, m_dict, values,
     index = int(m_dict['index'])
     # Make sure the index position hasn't already been assigned a value.
     if index in results_dictionary[name]:
-      _reuse_fail('{}[{}]'.format(name, index), values)
+      _reuse_fail(f'{name}[{index}]', values)
     results_dictionary[name][index] = parsed_value
 
 
@@ -317,7 +317,7 @@ def parse_values(values, type_map, ignore_unknown=False):
   while pos < len(values):
     m = PARAM_RE.match(values, pos)
     if not m:
-      raise ValueError('Malformed hyperparameter value: %s' % values[pos:])
+      raise ValueError(f'Malformed hyperparameter value: {values[pos:]}')
     # Check that there is a comma between parameters and move past it.
     pos = m.end()
     # Parse the values.
@@ -326,7 +326,7 @@ def parse_values(values, type_map, ignore_unknown=False):
     if name not in type_map:
       if ignore_unknown:
         continue
-      raise ValueError('Unknown hyperparameter type for %s' % name)
+      raise ValueError(f'Unknown hyperparameter type for {name}')
     type_ = type_map[name]
 
     # Set up correct parsing function (depending on whether type_ is a bool)
@@ -512,18 +512,16 @@ class HParams(object):
           self.add_hparam(name, as_str(getattr(value, kind)))
         else:
           self.add_hparam(name, getattr(value, kind))
+      elif kind.startswith('int64'):
+        # Setting attribute value to be 'int' to ensure the type is compatible
+        # with both Python2 and Python3.
+        self.add_hparam(name, [int(v) for v in getattr(value, kind).value])
+      elif kind.startswith('bytes'):
+        # Setting attribute value to be 'str' to ensure the type is compatible
+        # with both Python2 and Python3. UTF-8 encoding is assumed.
+        self.add_hparam(name, [as_str(v) for v in getattr(value, kind).value])
       else:
-        # List of values.
-        if kind.startswith('int64'):
-          # Setting attribute value to be 'int' to ensure the type is compatible
-          # with both Python2 and Python3.
-          self.add_hparam(name, [int(v) for v in getattr(value, kind).value])
-        elif kind.startswith('bytes'):
-          # Setting attribute value to be 'str' to ensure the type is compatible
-          # with both Python2 and Python3. UTF-8 encoding is assumed.
-          self.add_hparam(name, [as_str(v) for v in getattr(value, kind).value])
-        else:
-          self.add_hparam(name, [v for v in getattr(value, kind).value])
+        self.add_hparam(name, list(getattr(value, kind).value))
 
   def add_hparam(self, name, value):
     """Adds {name, value} pair to hyperparameters.
@@ -540,11 +538,10 @@ class HParams(object):
     # attribute of this object.  In that case we refuse to use it as a
     # hyperparameter name.
     if getattr(self, name, None) is not None:
-      raise ValueError('Hyperparameter name is reserved: %s' % name)
+      raise ValueError(f'Hyperparameter name is reserved: {name}')
     if isinstance(value, (list, tuple)):
       if not value:
-        raise ValueError(
-            'Multi-valued hyperparameters cannot be empty: %s' % name)
+        raise ValueError(f'Multi-valued hyperparameters cannot be empty: {name}')
       self._hparam_types[name] = (type(value[0]), True)
     else:
       self._hparam_types[name] = (type(value), False)
@@ -567,18 +564,16 @@ class HParams(object):
     param_type, is_list = self._hparam_types[name]
     if isinstance(value, list):
       if not is_list:
-        raise ValueError(
-            'Must not pass a list for single-valued parameter: %s' % name)
+        raise ValueError(f'Must not pass a list for single-valued parameter: {name}')
       setattr(self, name, [
           _cast_to_type_if_compatible(name, param_type, v) for v in value])
     elif isinstance(value, dict) and is_list:
       for k, v in value.items():
         getattr(self,
                 name)[k] = _cast_to_type_if_compatible(name, param_type, v)
+    elif is_list:
+      raise ValueError(f'Must pass a list for multi-valued parameter: {name}.')
     else:
-      if is_list:
-        raise ValueError(
-            'Must pass a list for multi-valued parameter: %s.' % name)
       setattr(self, name, _cast_to_type_if_compatible(name, param_type, value))
 
   def del_hparam(self, name):
@@ -688,42 +683,41 @@ class HParams(object):
 
   def get(self, key, default=None):
     """Returns the value of `key` if it exists, else `default`."""
-    if key in self._hparam_types:
+    if key not in self._hparam_types:
+      return default
       # Ensure that default is compatible with the parameter type.
-      if default is not None:
-        param_type, is_param_list = self._hparam_types[key]
-        type_str = 'list<%s>' % param_type if is_param_list else str(param_type)
-        fail_msg = ("Hparam '%s' of type '%s' is incompatible with "
-                    'default=%s' % (key, type_str, default))
+    if default is not None:
+      param_type, is_param_list = self._hparam_types[key]
+      type_str = f'list<{param_type}>' if is_param_list else str(param_type)
+      fail_msg = ("Hparam '%s' of type '%s' is incompatible with "
+                  'default=%s' % (key, type_str, default))
 
-        is_default_list = isinstance(default, list)
-        if is_param_list != is_default_list:
-          raise ValueError(fail_msg)
+      is_default_list = isinstance(default, list)
+      if is_param_list != is_default_list:
+        raise ValueError(fail_msg)
 
-        try:
-          if is_default_list:
-            for value in default:
-              _cast_to_type_if_compatible(key, param_type, value)
-          else:
-            _cast_to_type_if_compatible(key, param_type, default)
-        except ValueError as e:
-          raise ValueError('%s. %s' % (fail_msg, e))
+      try:
+        if is_default_list:
+          for value in default:
+            _cast_to_type_if_compatible(key, param_type, value)
+        else:
+          _cast_to_type_if_compatible(key, param_type, default)
+      except ValueError as e:
+        raise ValueError(f'{fail_msg}. {e}')
 
-      return getattr(self, key)
-
-    return default
+    return getattr(self, key)
 
   def __contains__(self, key):
     return key in self._hparam_types
 
   def __str__(self):
     hpdict = self.values()
-    output_list = ['{}={}'.format(key, hpdict[key]) for key in hpdict]
+    output_list = [f'{key}={hpdict[key]}' for key in hpdict]
     return ','.join(output_list)
 
   def __repr__(self):
     strval = str(sorted(self.values().items()))
-    return '%s(%s)' % (type(self).__name__, strval)
+    return f'{type(self).__name__}({strval})'
 
   @staticmethod
   def _get_kind_name(param_type, is_list):
@@ -754,7 +748,7 @@ class HParams(object):
     elif issubclass(param_type, float):
       typename = 'float'
     else:
-      raise ValueError('Unsupported parameter type: %s' % str(param_type))
+      raise ValueError(f'Unsupported parameter type: {str(param_type)}')
 
     suffix = 'list' if is_list else 'value'
     return '_'.join([typename, suffix])
@@ -778,7 +772,7 @@ class HParams(object):
         if kind.startswith('bytes'):
           v_list = [as_bytes(v) for v in getattr(self, name)]
         else:
-          v_list = [v for v in getattr(self, name)]
+          v_list = list(getattr(self, name))
         getattr(hparam_proto.hparam[name], kind).value.extend(v_list)
       else:
         v = getattr(self, name)

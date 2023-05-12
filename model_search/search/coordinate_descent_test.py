@@ -150,19 +150,17 @@ class CoordinateDescentTest(parameterized.TestCase, tf.test.TestCase):
     hparams = hp.HParams(
         initial_architecture=init_architecture, new_block_type=new_block)
 
-    trials = []
-    for i in range(completed_trials):
-      trials.append(
-          trial_module.Trial({
-              "id": i,
-              "model_dir": "/tmp/" + str(i),
-              "status": "COMPLETED",
-              "trial_infeasible": False,
-              "final_measurement": {
-                  "objective_value": 100 - i
-              }
-          }))
-
+    trials = [
+        trial_module.Trial({
+            "id": i,
+            "model_dir": f"/tmp/{str(i)}",
+            "status": "COMPLETED",
+            "trial_infeasible": False,
+            "final_measurement": {
+                "objective_value": 100 - i
+            },
+        }) for i in range(completed_trials)
+    ]
     # Adding one infeasible to make sure we don't fork from it.
     trials.append(
         trial_module.Trial({
@@ -211,20 +209,17 @@ class CoordinateDescentTest(parameterized.TestCase, tf.test.TestCase):
     hparams = hp.HParams(
         new_block_type="FIXED_CHANNEL_CONVOLUTION_16")  # enum: 1
 
-    # Create one fake trial for each architecture.
-    trials = []
-    for i in range(3):
-      trials.append(
-          trial_module.Trial({
-              "id": i,
-              "model_dir": str(i),
-              "status": "COMPLETED",
-              "trial_infeasible": False,
-              "final_measurement": {
-                  "objective_value": i
-              }
-          }))
-
+    trials = [
+        trial_module.Trial({
+            "id": i,
+            "model_dir": str(i),
+            "status": "COMPLETED",
+            "trial_infeasible": False,
+            "final_measurement": {
+                "objective_value": i
+            },
+        }) for i in range(3)
+    ]
     # Adding one infeasible to make sure we don't fork from it.
     trials.append(
         trial_module.Trial({
@@ -241,7 +236,7 @@ class CoordinateDescentTest(parameterized.TestCase, tf.test.TestCase):
     # Since forking is random, fork 1000 times then check that we forked from
     # only the trials we care about.
     forked = set()
-    for i in range(1000):
+    for _ in range(1000):
       _, fork_trial = algorithm.get_suggestion(trials, hparams)
       forked.add(int(fork_trial))
     self.assertEqual(forked, {0, 1})

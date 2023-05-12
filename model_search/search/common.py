@@ -55,9 +55,9 @@ def write_fork_edge(model_dir, to_id, from_id):
   if not tf.io.gfile.exists(model_dir):
     tf.io.gfile.makedirs(model_dir)
 
-  filename = os.path.join(model_dir, "{}.search_edge.txt".format(to_id))
+  filename = os.path.join(model_dir, f"{to_id}.search_edge.txt")
   with tf.io.gfile.GFile(filename, "w") as f:
-    f.write("{},{}".format(to_id, from_id))
+    f.write(f"{to_id},{from_id}")
 
 
 def encode_architecture(architecture, problem_type):
@@ -90,13 +90,9 @@ def get_allowed_depth(num_completed_trials, depth_thresholds=None,
     raise ValueError(
         "phoenix_spec.increase_complexity_min_trials cannot have more "
         "thresholds than phoenix_spec.maximum_depth.")
-  if num_completed_trials >= depth_thresholds[-1]:
-    allowed_depth = max_depth
-  else:
-    allowed_depth = next(
-        depth for depth, trial_threshold in enumerate(depth_thresholds)
-        if trial_threshold > num_completed_trials)
-  return allowed_depth
+  return (max_depth if num_completed_trials >= depth_thresholds[-1] else next(
+      depth for depth, trial_threshold in enumerate(depth_thresholds)
+      if trial_threshold > num_completed_trials))
 
 
 def block_indices(phoenix_spec):

@@ -46,9 +46,7 @@ class SvdfCellTest(tf.test.TestCase):
     with g.as_default():
       with self.session(graph=g) as sess:
         initializer = self._buildInitializer()
-        act_func = None
-        if activation != "linear":
-          act_func = getattr(tf.nn, activation)
+        act_func = getattr(tf.nn, activation) if activation != "linear" else None
         svdf_layer = svdf_cell.SvdfCell(
             num_units=num_units,
             memory_size=memory_size,
@@ -61,8 +59,7 @@ class SvdfCellTest(tf.test.TestCase):
 
         state = svdf_layer.zero_state(
             batch_size=inputs.shape[1], dtype=tf.float32)
-        i = 0
-        for input_t in inputs:
+        for i, input_t in enumerate(inputs):
           logging.debug("state[%d]:\n %s", i, state.eval())
           input_t_constant = tf.constant(input_t)
           activations, state = svdf_layer(inputs=input_t_constant, state=state)
@@ -72,7 +69,6 @@ class SvdfCellTest(tf.test.TestCase):
             sess.run(init)
           outputs = self._collectOutputsAndGradients(sess, input_t_constant,
                                                      activations)
-          i += 1
         return outputs
 
   def _runTest(self, num_units, memory_size, rank, inputs, use_bias, activation,

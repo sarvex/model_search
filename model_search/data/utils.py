@@ -27,9 +27,9 @@ def default_get_input_layer_fn(problem_type, feature_columns):
   """Default implementation of get_input_layer_fn."""
 
   def _input_layer_fn(features,
-                      is_training,
-                      scope_name="Phoenix/Input",
-                      lengths_feature_name=None):
+                        is_training,
+                        scope_name="Phoenix/Input",
+                        lengths_feature_name=None):
 
     with tf.compat.v1.variable_scope(scope_name):
       if problem_type == phoenix_spec_pb2.PhoenixSpec.CNN:
@@ -38,7 +38,6 @@ def default_get_input_layer_fn(problem_type, feature_columns):
           return features, None
         return tf.cast(
             features[feature_columns[0].name], dtype=tf.float32), None
-      # DNN
       elif problem_type == phoenix_spec_pb2.PhoenixSpec.DNN:
         # To allow running a custom evaluation where multiple batches are
         # aggregated in a single metric_fn call, we need to define the
@@ -48,18 +47,12 @@ def default_get_input_layer_fn(problem_type, feature_columns):
             feature_columns[0], type(tf.feature_column.numeric_column("x")))):
           return tf.cast(
               features[feature_columns[0].name], dtype=tf.float32), None
-        # All are TF1 feature columns
-        elif all([
-            not feature_column_lib.is_feature_column_v2([fc])
-            for fc in feature_columns
-        ]):
+        elif all(not feature_column_lib.is_feature_column_v2([fc])
+                 for fc in feature_columns):
           return tf.compat.v1.feature_column.input_layer(
               features, feature_columns, trainable=is_training), None
-        # Some are TF1 feature columns
-        elif any([
-            not feature_column_lib.is_feature_column_v2([fc])
-            for fc in feature_columns
-        ]):
+        elif any(not feature_column_lib.is_feature_column_v2([fc])
+                 for fc in feature_columns):
           fc_v1 = [
               fc for fc in feature_columns
               if not feature_column_lib.is_feature_column_v2([fc])
@@ -75,15 +68,15 @@ def default_get_input_layer_fn(problem_type, feature_columns):
                   features)
           return tf.concat([input_1, input_2], axis=1), None
 
-        # None is TF1 feature columns
         else:
           return tf.keras.layers.DenseFeatures(
               feature_columns, name="input_layer",
               trainable=is_training)(features), None
 
-      # RNN
-      elif (problem_type == phoenix_spec_pb2.PhoenixSpec.RNN_ALL_ACTIVATIONS or
-            problem_type == phoenix_spec_pb2.PhoenixSpec.RNN_LAST_ACTIVATIONS):
+      elif problem_type in [
+            phoenix_spec_pb2.PhoenixSpec.RNN_ALL_ACTIVATIONS,
+            phoenix_spec_pb2.PhoenixSpec.RNN_LAST_ACTIVATIONS,
+        ]:
         if lengths_feature_name:
           return (tf.cast(features[feature_columns[0].name],
                           dtype=tf.float32), features[lengths_feature_name])

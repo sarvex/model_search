@@ -85,10 +85,7 @@ def get_trial_mode(ensemble_spec, distillation_spec, trial_id):
 
   # Check pool sizes to see what phase this trial is in.
   modes.sort(key=lambda x: (x[1], x[0]), reverse=True)
-  for mode, n in modes:
-    if trial_id > n:
-      return mode
-  return TrialMode.NO_PRIOR
+  return next((mode for mode, n in modes if trial_id > n), TrialMode.NO_PRIOR)
 
 
 def get_intermixed_trials(trials, n, n_user_suggestions):
@@ -182,14 +179,14 @@ def import_towers_one_trial(features, input_layer_fn, phoenix_spec,
     towers = architecture_utils.get_number_of_towers(prev_model_dir, generator)
     # Import all towers from a given generator.
     for i in range(towers):
-      tower_name = generator + '_{}'.format(str(i))
+      tower_name = f'{generator}_{str(i)}'
       tower_spec = architecture_utils.import_tower(
           phoenix_spec=phoenix_spec,
           features=features,
           input_layer_fn=input_layer_fn,
           shared_input_tensor=shared_input_tensor,
           original_tower_name=tower_name,
-          new_tower_name=caller_generator + '_{}'.format(str(imported_towers)),
+          new_tower_name=f'{caller_generator}_{str(imported_towers)}',
           model_directory=prev_model_dir,
           is_training=is_training,
           logits_dimension=logits_dimension,
@@ -197,7 +194,8 @@ def import_towers_one_trial(features, input_layer_fn, phoenix_spec,
           force_snapshot=True,
           new_model_directory=my_model_dir,
           force_freeze=force_freeze,
-          allow_auxiliary_head=allow_auxiliary_head)
+          allow_auxiliary_head=allow_auxiliary_head,
+      )
       logits_specs.append(tower_spec.logits_spec)
       architectures.append(tower_spec.architecture)
       imported_towers += 1
@@ -220,15 +218,15 @@ def import_towers_multiple_trials(features, input_layer_fn, phoenix_spec,
   """Imports search generators' model from many trials."""
   logits_specs = []
   architectures = []
+  tower_name = 'search_generator_0'
   for i, prev_model_dir in enumerate(previous_model_dirs):
-    tower_name = 'search_generator_0'
     tower_spec = architecture_utils.import_tower(
         phoenix_spec=phoenix_spec,
         features=features,
         input_layer_fn=input_layer_fn,
         shared_input_tensor=shared_input_tensor,
         original_tower_name=tower_name,
-        new_tower_name=caller_generator + '_{}'.format(str(i)),
+        new_tower_name=f'{caller_generator}_{str(i)}',
         model_directory=prev_model_dir,
         is_training=is_training,
         logits_dimension=logits_dimension,
@@ -236,7 +234,8 @@ def import_towers_multiple_trials(features, input_layer_fn, phoenix_spec,
         force_snapshot=True,
         new_model_directory=my_model_dir,
         force_freeze=force_freeze,
-        allow_auxiliary_head=allow_auxiliary_head)
+        allow_auxiliary_head=allow_auxiliary_head,
+    )
     logits_specs.append(tower_spec.logits_spec)
     architectures.append(tower_spec.architecture)
 

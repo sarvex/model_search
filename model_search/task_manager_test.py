@@ -52,12 +52,11 @@ def _default_predictions_fn(logits,
   probabilities = tf.nn.softmax(new_logits)
   log_probabilities = tf.nn.log_softmax(new_logits)
 
-  predictions_dict = {
+  return {
       'predictions': predictions,
       'probabilities': probabilities,
       'log_probabilities': log_probabilities,
   }
-  return predictions_dict
 
 
 class TaskManagerTest(parameterized.TestCase, tf.test.TestCase):
@@ -441,7 +440,7 @@ class TaskManagerTest(parameterized.TestCase, tf.test.TestCase):
       }
       features = {'x': tf.zeros([10, 10])}
       if weight_is_a_feature:
-        features.update(weights)
+        features |= weights
       elif isinstance(labels, dict):
         labels.update(weights)
       task_manager_instance = task_manager.TaskManager(spec)
@@ -496,10 +495,10 @@ class TaskManagerTest(parameterized.TestCase, tf.test.TestCase):
     }
     # Fix the size of the dict labels to bypass the assertion.
     if not weight_is_a_feature:
-      labels.update({
+      labels |= {
           'not_used': tf.ones([20], dtype=tf.int32),
-          'not_used2': tf.ones([20], dtype=tf.int32)
-      })
+          'not_used2': tf.ones([20], dtype=tf.int32),
+      }
 
     weights = {
         'weight1': tf.constant([2] * 20),
@@ -507,7 +506,7 @@ class TaskManagerTest(parameterized.TestCase, tf.test.TestCase):
     }
     features = {'x': tf.zeros([10, 10])}
     if not weight_is_a_feature:
-      features.update(weights)
+      features |= weights
     task_manager_instance = task_manager.TaskManager(spec)
     logits = tf.keras.layers.Dense(10)(tf.zeros([20, 10]))
     logits_spec = architecture_utils.LogitsSpec(logits=logits)

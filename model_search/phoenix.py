@@ -77,13 +77,12 @@ def _default_predictions_fn(logits,
   probabilities = tf.nn.softmax(new_logits)
   log_probabilities = tf.nn.log_softmax(new_logits)
 
-  predictions_dict = {
+  return {
       "predictions": predictions,
       "probabilities": probabilities,
       "log_probabilities": log_probabilities,
-      "logits": logits
+      "logits": logits,
   }
-  return predictions_dict
 
 
 class Estimator(tf.estimator.Estimator):
@@ -325,9 +324,9 @@ class Phoenix(object):
       # When predicting for RNN, we might not need the length.
       is_training = mode == tf.estimator.ModeKeys.TRAIN
       lengths_feature_name = self._phoenix_spec.lengths_feature_name
-      if mode == tf.estimator.ModeKeys.PREDICT:
-        if isinstance(features, dict) and lengths_feature_name not in features:
-          lengths_feature_name = ""
+      if (mode == tf.estimator.ModeKeys.PREDICT and isinstance(features, dict)
+          and lengths_feature_name not in features):
+        lengths_feature_name = ""
 
       shared_input_tensor = None
       shared_lengths = None
@@ -419,9 +418,9 @@ class Phoenix(object):
       teacher_logits = None
       tower_name = None
       priors_logits_specs = []
-      if base_tower_generator.PRIOR_GENERATOR in logit_specs.keys():
+      if base_tower_generator.PRIOR_GENERATOR in logit_specs:
         priors_logits_specs = logit_specs[base_tower_generator.PRIOR_GENERATOR]
-      if base_tower_generator.REPLAY_GENERATOR in logit_specs.keys():
+      if base_tower_generator.REPLAY_GENERATOR in logit_specs:
         priors_logits_specs = logit_specs[base_tower_generator.REPLAY_GENERATOR]
       if trial_mode == trial_utils.TrialMode.ENSEMBLE_SEARCH:
         ensemble_logits = self._ensembler.bundle_logits(
@@ -586,7 +585,7 @@ class Phoenix(object):
       the initial architecture.
     """
 
-    if not all("FLATTEN" not in block for block in hparams.new_block_type):
+    if any("FLATTEN" in block for block in hparams.new_block_type):
       raise ValueError("Flatten cannot be a search block type")
 
     return Estimator(
@@ -623,7 +622,7 @@ class Phoenix(object):
       the initial architecture.
     """
 
-    if not all("FLATTEN" not in block for block in hparams.new_block_type):
+    if any("FLATTEN" in block for block in hparams.new_block_type):
       raise ValueError("Flatten cannot be a search block type")
 
     return tf.compat.v1.estimator.tpu.TPUEstimator(
@@ -654,8 +653,7 @@ class Phoenix(object):
     # Search for the best tower of depth phoenix_spec.minimum_depth
     # Used for initial structure (before evolution + going deeper).
     for i in range(phoenix_spec.minimum_depth):
-      hp_space.Choice("initial_architecture_{}".format(i),
-                      phoenix_spec.blocks_to_use)
+      hp_space.Choice(f"initial_architecture_{i}", phoenix_spec.blocks_to_use)
 
     learning_spec = phoenix_spec.learning_spec
 

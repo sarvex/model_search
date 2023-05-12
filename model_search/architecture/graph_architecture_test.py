@@ -130,7 +130,7 @@ class GraphArchitectureTest(parameterized.TestCase, tf.test.TestCase):
         saver = tf.compat.v1.train.Saver()
         sess.run(tf.compat.v1.global_variables_initializer())
         sess.run(tf.compat.v1.local_variables_initializer())
-        saver.save(sess, directory + "/ckpt")
+        saver.save(sess, f"{directory}/ckpt")
 
       output_architecture = graph_architecture.restore_from_checkpoint(
           directory)
@@ -488,7 +488,7 @@ class GraphArchitectureTest(parameterized.TestCase, tf.test.TestCase):
         saver = tf.compat.v1.train.Saver()
         sess.run(tf.compat.v1.global_variables_initializer())
         sess.run(tf.compat.v1.local_variables_initializer())
-        saver.save(sess, directory + "/ckpt")
+        saver.save(sess, f"{directory}/ckpt")
 
       with self.test_session(graph=tf.Graph()) as sess:
         input_tensor = tf.zeros([100, 32, 32, 3])
@@ -501,8 +501,10 @@ class GraphArchitectureTest(parameterized.TestCase, tf.test.TestCase):
             is_frozen=False,
             dropout_rate=None)
         snapshotting_variables = architecture_utils.init_variables(
-            tf.train.latest_checkpoint(directory), "Phoenix/test_tower",
-            "Phoenix/{}".format(new_tower_name))
+            tf.train.latest_checkpoint(directory),
+            "Phoenix/test_tower",
+            f"Phoenix/{new_tower_name}",
+        )
         self.assertCountEqual(snapshotting_variables, expected_output)
 
 

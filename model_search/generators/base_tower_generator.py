@@ -67,10 +67,10 @@ class BaseTowerGenerator(object, metaclass=abc.ABCMeta):
     """Saves architecture in a text file."""
     if not tf.io.gfile.exists(model_dir):
       tf.io.gfile.makedirs(model_dir)
-    filename = os.path.join(model_dir, "{}.arch.txt".format(trial_id))
+    filename = os.path.join(model_dir, f"{trial_id}.arch.txt")
     with tf.io.gfile.GFile(filename, "w") as f:
       for item in map(str, architecture.tolist()):
-        f.write("{}\n".format(item))
+        f.write(f"{item}\n")
 
   def _build_from_existing_checkpoint(self,
                                       model_dir,
@@ -115,7 +115,7 @@ class BaseTowerGenerator(object, metaclass=abc.ABCMeta):
     logits_specs = []
     architectures = []
     for i in range(towers):
-      tower_name = self.generator_name() + "_{}".format(str(i))
+      tower_name = f"{self.generator_name()}_{str(i)}"
       tower_spec = architecture_utils.import_tower(
           phoenix_spec=self._phoenix_spec,
           features=features,

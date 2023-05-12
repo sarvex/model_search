@@ -49,10 +49,8 @@ class PriorGenerator(base_tower_generator.BaseTowerGenerator):
         trial for trial in trials if trial.id <= minimal_pool_size
     ]
 
-    best_trials = self._metadata.get_best_k(
-        trials=relevant_trials, k=num_trials_to_consider)
-
-    return best_trials
+    return self._metadata.get_best_k(trials=relevant_trials,
+                                     k=num_trials_to_consider)
 
   def _nonadaptive_ensemble(self, features, input_layer_fn, shared_input_tensor,
                             shared_lengths, logits_dimension, relevant_trials,

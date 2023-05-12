@@ -38,10 +38,7 @@ def _one_nonzero_per_row(matrix):
 
 
 def _contains_row(matrix, row):
-  for r in matrix:
-    if np.all(r == row):
-      return True
-  return False
+  return any(np.all(r == row) for r in matrix)
 
 
 class LinearModel(search_algorithm.SearchAlgorithm):
@@ -139,8 +136,10 @@ class LinearModel(search_algorithm.SearchAlgorithm):
     align = self._phoenix_spec.linear_model.network_alignment
     if align == phoenix_spec_pb2.LinearModelSpec.NET_ALIGN_BASE:
       return empties + list(arch)
-    elif (align == phoenix_spec_pb2.LinearModelSpec.NET_ALIGN_HEAD or
-          align == phoenix_spec_pb2.LinearModelSpec.NET_ALIGN_UNSPECIFIED):
+    elif align in [
+          phoenix_spec_pb2.LinearModelSpec.NET_ALIGN_HEAD,
+          phoenix_spec_pb2.LinearModelSpec.NET_ALIGN_UNSPECIFIED,
+      ]:
       return list(arch) + empties
     else:
       raise ValueError("Phoenix spec network_alignment unknown value")
@@ -205,10 +204,6 @@ class LinearModel(search_algorithm.SearchAlgorithm):
       # when mutate_replace output has been tried, but not just a while loop,
       # since that could run forver if # of untried architectures is small.
       suggestion = common.mutate_replace(suggestion, new_block)
-    else:
-      # The linear model suggested a novel architecture; use it.
-      pass
-
     suggestion = [blocks.BlockType(b) for b in suggestion]
     return np.array(
         architecture_utils.fix_architecture_order(

@@ -219,7 +219,7 @@ class LinearModelTest(parameterized.TestCase, tf.test.TestCase):
         blocks.BlockType.DOWNSAMPLE_FLATTEN,
         blocks.BlockType.PLATE_REDUCTION_FLATTEN,
     )
-    assert not set(b.value for b in flatten_blocks) & set(blocks_to_use)
+    assert not {b.value for b in flatten_blocks} & set(blocks_to_use)
 
     # Generate architectures that contain a flatten block.
     def random_arch():

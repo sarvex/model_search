@@ -73,7 +73,7 @@ class MlMetadataTest(absltest.TestCase):
     self.assertLen(output, 3)
     for i in range(3):
       self.assertEqual(output[i].status, "COMPLETED")
-      self.assertEqual(output[i].model_dir, "/tmp/" + str(output[i].id))
+      self.assertEqual(output[i].model_dir, f"/tmp/{str(output[i].id)}")
       self.assertEqual(output[i].final_measurement.objective_value,
                        float(output[i].id) / 10)
 

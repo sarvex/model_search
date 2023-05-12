@@ -44,11 +44,9 @@ class ConstrainedDescent(search_algorithm.SearchAlgorithm):
 
   def _remove_reduction_blocks(self, architecture):
     """Removes any reduction blocks from the architecture."""
-    result = []
-    for block in architecture:
-      if self._is_reduction_block(block):
-        continue
-      result.append(block)
+    result = [
+        block for block in architecture if not self._is_reduction_block(block)
+    ]
     return np.array(result)
 
   def _add_reduction_blocks(self, architecture, every, reduction_type):
@@ -89,17 +87,14 @@ class ConstrainedDescent(search_algorithm.SearchAlgorithm):
     sorted_trials = self._metadata.get_best_k(
         trials, k=int(1e10), valid_only=True) or []
     num_completed_trials = len(sorted_trials)
-    best_trials = sorted_trials[:self._phoenix_spec.beam_size]
-
-    # No feasible trials yet, use initial architecture passed in from hparams.
-    if not best_trials:
-      best_architecture = common.encode_architecture(
-          hparams.initial_architecture, self._phoenix_spec.problem_type)
-      best_trial = None
-    else:
+    if best_trials := sorted_trials[:self._phoenix_spec.beam_size]:
       best_architecture, best_trial = (
           common.choose_random_trial_and_get_architecture(best_trials))
 
+    else:
+      best_architecture = common.encode_architecture(
+          hparams.initial_architecture, self._phoenix_spec.problem_type)
+      best_trial = None
     # Get the architecture without reductions or replications which will be
     # grown or mutated.
     if self._phoenix_spec.replicate_cell:

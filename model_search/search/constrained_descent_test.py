@@ -86,19 +86,17 @@ class ConstrainedDescentTest(parameterized.TestCase, tf.test.TestCase):
         replicate_cell=replicate_cell,
         beam_size=3)
     algorithm = constrained_descent.ConstrainedDescent(spec, self._metadata)
-    trials = []
-    for i in range(completed_trials):
-      trials.append(
-          trial_module.Trial({
-              "id": i,
-              "model_dir": "/tmp/" + str(i),
-              "status": "COMPLETED",
-              "trial_infeasible": False,
-              "final_measurement": {
-                  "objective_value": 100 - i
-              }
-          }))
-
+    trials = [
+        trial_module.Trial({
+            "id": i,
+            "model_dir": f"/tmp/{str(i)}",
+            "status": "COMPLETED",
+            "trial_infeasible": False,
+            "final_measurement": {
+                "objective_value": 100 - i
+            },
+        }) for i in range(completed_trials)
+    ]
     actual_architecture, fork_trial = algorithm.get_suggestion(trials, hparams)
 
     # We use a beam of size 3 and always choose the last trial to be the best.
